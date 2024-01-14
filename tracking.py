@@ -5,8 +5,19 @@ Created on Mon Jun 26 20:09:16 2023
 @author: Jenci
 """
 
+
+import sys
 import cv2
 
+host="tellohost"
+retryCount=5
+port="1000"
+
+#mocskos trukk
+if len(sys.argv) > 1 and sys.argv[1] == "--test":
+    from tello_mock import TelloMock as Tello
+else:
+    from djitellopy import Tello
 tracker = cv2.legacy.TrackerMOSSE_create()
 
 cap = cv2.VideoCapture(0)
@@ -20,7 +31,13 @@ def drawBox(img,bbox,centerx,centery):
     cv2.putText(img, "Tracking X=       Y=", (80, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     cv2.putText(img, str(targetx), (180, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     cv2.putText(img, str(targety), (260, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    
+
+
+myTello = Tello(host, retryCount, port)
+
+prev_centerx = 0
+prev_centery = 0
+move_init = False
 
 while True:
     timer = cv2.getTickCount()
@@ -33,7 +50,17 @@ while True:
         success, bbox = tracker.update(img_clean)
         if success:
             drawBox(img,bbox,centerx,centery)
-            print("action")
+            if not move_init:
+                #csak eloszor
+                prev_centerx = bbox[0]
+                prev_centery = bbox[1]
+                move_init = True
+                print("x")
+            else:
+                print("dX: %d, dY: %d" % (bbox[0]-prev_centerx, bbox[1]-prev_centery))
+                print("myTello.send_rc_control vagy akarmi ami kell")
+                prev_centerx = bbox[0] - prev_centerx
+                prev_centery = bbox[1] - prev_centery
         else:
             cv2.putText(img, "Lost", (80, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     
